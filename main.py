@@ -63,6 +63,9 @@ def ehhiConvert(comic_info: dict, comic: str, comic_name: str, comic_authors: li
     c1.content = ''.join(content)
     book.add_item(c1)
 
+    book.add_item(epub.EpubNcx())
+    book.add_item(epub.EpubNav())
+
     # basic spine
     book.spine = ["nav", c1]
     print("Writing to file...")
