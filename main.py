@@ -8,7 +8,7 @@ import traceback
 from PIL import Image
 from ebooklib import epub
 
-PICA_COMIC_DOWNLOAD_DIR = os.getenv('APPDATA') + "\com.kokoiro.xyz\pica_comic\download"
+PICA_COMIC_DOWNLOAD_DIR = os.getenv('APPDATA') + "/com.kokoiro.xyz/pica_comic/download"
 
 
 def ehhiConvert(comic: str, comic_name: str, comic_authors: list):
@@ -99,7 +99,8 @@ def picacgConverter(comic: dict, comic_dir: str):
         for image in image_list:
             if image.startswith("cover") or image.endswith(".json"):
                 image_list.remove(image)
-        image_path_list = [os.path.join(comic_dir, str(i + 2), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in range(len(image_list) - 1)]
+        image_path_list = [os.path.join(comic_dir, str(i + 2), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
+                           range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
         for i2 in image_path_list:
@@ -166,7 +167,8 @@ def jmConverter(comic: dict, comic_dir: str):
         for image in image_list:
             if image.startswith("cover") or image.endswith(".json"):
                 image_list.remove(image)
-        image_path_list = [os.path.join(comic_dir, str(i + 1), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in range(len(image_list) - 1)]
+        image_path_list = [os.path.join(comic_dir, str(i + 1), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
+                           range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
         for i2 in image_path_list:
@@ -204,7 +206,6 @@ def jmConverter(comic: dict, comic_dir: str):
     epub.write_epub(f"{os.path.split(comic_dir)[-1]}.epub", book)
 
 
-
 def main():
     # list all dir in Pica Comic Download Dir
     dirs = os.listdir(PICA_COMIC_DOWNLOAD_DIR)
@@ -220,7 +221,8 @@ def main():
     for comic in all_comic:
         try:
             comic_info = json.loads(open(os.path.join(comic, "info.json"), "rb").read())
-            if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info["comic"]:
+            if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info[
+                "comic"]:
                 comic_name = comic_info["comic"]["name"]
                 comic_authors = comic_info["comic"]["artists"]
                 ehhiConvert(comic, comic_name, comic_authors)
