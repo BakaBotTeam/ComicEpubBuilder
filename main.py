@@ -128,6 +128,8 @@ def picacgConverter(comic: dict, comic_dir: str):
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
 
+    book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in downloaded_part]
+
     # basic spine
     print("Writing to file...")
     epub.write_epub(f"{os.path.split(comic_dir)[-1]}.epub", book)
