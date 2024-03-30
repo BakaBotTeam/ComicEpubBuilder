@@ -12,9 +12,8 @@ PICA_COMIC_DOWNLOAD_DIR = os.getenv('APPDATA') + "\com.kokoiro.xyz\pica_comic\do
 
 
 def ehhiConvert(comic: str, comic_name: str, comic_authors: list):
-    # EHentai / hitomi support
-    print(f"Found EHentai / Hitomi / NHentai comic: {comic_name} by {', '.join(comic_authors)}")
-
+    # EHentai / Hitomi / NHentai / Ht support
+    print(f"Found (EHentai / Hitomi / NHentai / Wnacg) comic: {comic_name} by {', '.join(comic_authors)}")
     cover_image = os.path.join(comic, "cover.jpg")
     image_list = os.listdir(comic)
     for image in image_list:
@@ -221,7 +220,7 @@ def main():
     for comic in all_comic:
         try:
             comic_info = json.loads(open(os.path.join(comic, "info.json"), "rb").read())
-            if "comic" in comic_info and "downloadedChapters" not in comic_info:
+            if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info["comic"]:
                 comic_name = comic_info["comic"]["name"]
                 comic_authors = comic_info["comic"]["artists"]
                 ehhiConvert(comic, comic_name, comic_authors)
@@ -231,6 +230,10 @@ def main():
                 ehhiConvert(comic, comic_name, comic_authors)
             elif "comicID" in comic_info and comic_info["comicID"].startswith("nhentai"):
                 comic_name = comic_info["title"]
+                comic_authors = ["N/A"]
+                ehhiConvert(comic, comic_name, comic_authors)
+            elif "comic" in comic_info and "uploader" in comic_info["comic"]:
+                comic_name = comic_info["comic"]["name"]
                 comic_authors = ["N/A"]
                 ehhiConvert(comic, comic_name, comic_authors)
             elif "comicItem" in comic_info:
