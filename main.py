@@ -154,11 +154,11 @@ def main():
             if "comic" in comic_info:
                 comic_name = comic_info["comic"]["name"]
                 comic_authors = comic_info["comic"]["artists"]
-                # ehhiConvert(comic_info, comic, comic_name, comic_authors)
+                ehhiConvert(comic_info, comic, comic_name, comic_authors)
             elif "gallery" in comic_info:
                 comic_name = comic_info["gallery"]["title"]
                 comic_authors = comic_info["gallery"]["tags"]["artist"]
-                # ehhiConvert(comic_info, comic, comic_name, comic_authors)
+                ehhiConvert(comic_info, comic, comic_name, comic_authors)
             elif "comicItem" in comic_info:
                 picacgConverter(comic_info, comic)
             else:
