@@ -15,6 +15,7 @@ from PIL import Image
 from ebooklib import epub
 
 PREFER_IMAGE_SIZE = (800, 600)
+SPLIT_EVERY_CHAPTER = 5
 
 
 def image_resize(image_bytes: bytes) -> bytes:
@@ -22,9 +23,9 @@ def image_resize(image_bytes: bytes) -> bytes:
     img_byte_arr = io.BytesIO()
     resize_scale = 1.0
     if im.size[0] / PREFER_IMAGE_SIZE[0] > im.size[1] / PREFER_IMAGE_SIZE[1]:
-        resize_scale = im.size[0] / PREFER_IMAGE_SIZE[0]
+        resize_scale = min(im.size[0] / PREFER_IMAGE_SIZE[0], resize_scale)
     else:
-        resize_scale = im.size[1] / PREFER_IMAGE_SIZE[1]
+        resize_scale = min(im.size[1] / PREFER_IMAGE_SIZE[1], resize_scale)
     resized_im = im.resize((int(im.size[0] / resize_scale), int(im.size[1] / resize_scale)))
     resized_im.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
@@ -105,28 +106,60 @@ def picacgConverter(comic: dict, comic_dir: str):
     comic_author = comic['comicItem']['author']
     print(f"Found Picacg comic: {comic_name} by {comic_author}")
     all_part = comic['chapters']
-    all_part.reverse()
-    downloaded_part = [i - 1 for i in comic['downloadedChapters']]
+    downloaded_part = comic['downloadedChapters'].sort()
     cover_image = os.path.join(comic_dir, "cover.jpg")
+    flag_splited = 0
+
     print("Building epub book...")
+    flag_split = 0
+    flag_splited += 1
+    _downloaded_part = []
 
     book = epub.EpubBook()
     book.set_identifier(os.path.split(comic_dir)[-1])
-    book.set_title(comic_name)
+    book.set_title(f"{comic_name} - {flag_splited}")
     book.set_language("en")
     book.add_author(comic_author)
 
     print("Adding cover to the book...")
     image_file = open(cover_image, 'rb').read()
     book.set_cover("cover.jpg", image_file, create_page=False)
-    webp_warn = False
     book.spine = ["nav"]
 
     for i in downloaded_part:
         print(f"Found downloaded chapter {all_part[i]}")
+        if SPLIT_EVERY_CHAPTER != -1 and flag_split >= SPLIT_EVERY_CHAPTER:
+            print("Split book.")
+            book.add_item(epub.EpubNcx())
+            book.add_item(epub.EpubNav())
+
+            book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in _downloaded_part]
+
+            # basic spine
+            print("Writing to file...")
+            valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
+            epub.write_epub(f"{valid_file_name} - {flag_splited}.epub", book)
+
+            print("Building epub book...")
+            flag_split = 0
+            flag_splited += 1
+            _downloaded_part = []
+
+            book = epub.EpubBook()
+            book.set_identifier(os.path.split(comic_dir)[-1])
+            book.set_title(f"{comic_name} - {flag_splited}")
+            book.set_language("en")
+            book.add_author(comic_author)
+
+            print("Adding cover to the book...")
+            image_file = open(cover_image, 'rb').read()
+            book.set_cover("cover.jpg", image_file, create_page=False)
+            book.spine = ["nav"]
+
+        flag_split += 1
         try:
-            image_list = os.listdir(os.path.join(comic_dir, str(i + 2)))
-            image_dir = os.path.join(comic_dir, str(i + 2))
+            image_list = os.listdir(os.path.join(comic_dir, str(i + 1)))
+            image_dir = os.path.join(comic_dir, str(i + 1))
         except FileNotFoundError:
             image_list = os.listdir(os.path.join(comic_dir, all_part[i]))
             image_dir = os.path.join(comic_dir, all_part[i])
@@ -169,16 +202,17 @@ def picacgConverter(comic: dict, comic_dir: str):
         c1.content = ''.join(content)
         book.add_item(c1)
         book.spine.append(c1)
+        _downloaded_part.append(i)
 
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
 
-    book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in downloaded_part]
+    book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in _downloaded_part]
 
     # basic spine
     print("Writing to file...")
     valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
-    epub.write_epub(f"{valid_file_name}.epub", book)
+    epub.write_epub(f"{valid_file_name} - {flag_splited}.epub", book)
 
 
 def jmConverter(comic: dict, comic_dir: str):
@@ -186,26 +220,60 @@ def jmConverter(comic: dict, comic_dir: str):
     comic_authors = comic['comic']['author']
     print(f"Found JMComic comic: {comic_name} by {', '.join(comic_authors)}")
     all_part = comic['comic']['epNames']
-    downloaded_part = [i for i in comic['downloadedChapters']]
+    downloaded_part = comic['downloadedChapters'].sort()
     cover_image = os.path.join(comic_dir, "cover.jpg")
+    flag_splited = 0
+
     print("Building epub book...")
+    flag_split = 0
+    flag_splited += 1
+    _downloaded_part = []
 
     book = epub.EpubBook()
     book.set_identifier(os.path.split(comic_dir)[-1])
-    book.set_title(comic_name)
+    book.set_title(f"{comic_name} - {flag_splited}")
     book.set_language("en")
 
-    for i in comic_authors:
-        book.add_author(i)
+    for comic_author in comic_authors:
+        book.add_author(comic_author)
 
     print("Adding cover to the book...")
     image_file = open(cover_image, 'rb').read()
     book.set_cover("cover.jpg", image_file, create_page=False)
-    webp_warn = False
     book.spine = ["nav"]
 
     for i in downloaded_part:
         print(f"Found downloaded chapter {all_part[i]}")
+        if SPLIT_EVERY_CHAPTER != -1 and flag_split >= SPLIT_EVERY_CHAPTER:
+            print("Split book.")
+            book.add_item(epub.EpubNcx())
+            book.add_item(epub.EpubNav())
+
+            book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in _downloaded_part]
+
+            # basic spine
+            print("Writing to file...")
+            valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
+            epub.write_epub(f"{valid_file_name} - {flag_splited}.epub", book)
+
+            print("Building epub book...")
+            flag_split = 0
+            flag_splited += 1
+            _downloaded_part = []
+
+            book = epub.EpubBook()
+            book.set_identifier(os.path.split(comic_dir)[-1])
+            book.set_title(f"{comic_name} - {flag_splited}")
+            book.set_language("en")
+            for comic_author in comic_authors:
+                book.add_author(comic_author)
+
+            print("Adding cover to the book...")
+            image_file = open(cover_image, 'rb').read()
+            book.set_cover("cover.jpg", image_file, create_page=False)
+            book.spine = ["nav"]
+
+        flag_split += 1
         try:
             image_list = os.listdir(os.path.join(comic_dir, str(i + 2)))
             image_dir = os.path.join(comic_dir, str(i + 2))
@@ -251,19 +319,21 @@ def jmConverter(comic: dict, comic_dir: str):
         c1.content = ''.join(content)
         book.add_item(c1)
         book.spine.append(c1)
+        _downloaded_part.append(i)
 
     book.add_item(epub.EpubNcx())
     book.add_item(epub.EpubNav())
 
-    book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in downloaded_part]
+    book.toc = [epub.Link(f"chap_{i}.xhtml", all_part[i], f"chap_{i}") for i in _downloaded_part]
 
     # basic spine
     print("Writing to file...")
     valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
-    epub.write_epub(f"{valid_file_name}.epub", book)
+    epub.write_epub(f"{valid_file_name} - {flag_splited}.epub", book)
 
 
 def processor(comic: str) -> None:
+    global SPLIT_EVERY_CHAPTER
     try:
         comic_info = json.loads(open(os.path.join(comic, "info.json"), "rb").read())
         if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info[
@@ -284,9 +354,11 @@ def processor(comic: str) -> None:
             comic_authors = ["N/A"]
             ehhiConvert(comic, comic_name, comic_authors)
         elif "comicItem" in comic_info:
+            SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) : "))
             picacgConverter(comic_info, comic)
             pass
         elif "comic" in comic_info and "downloadedChapters" in comic_info:
+            SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) : "))
             jmConverter(comic_info, comic)
             pass
         else:
@@ -298,6 +370,7 @@ def processor(comic: str) -> None:
 
 
 def main():
+    global SPLIT_EVERY_CHAPTER
     answer = input("[1] Downloaded comic directory; [2] Exported comic : ")
     root = Tk()
     root.attributes('-topmost', 'true')
