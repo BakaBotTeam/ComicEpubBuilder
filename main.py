@@ -373,7 +373,7 @@ def processor(comic: str) -> None:
 
 def main():
     global SPLIT_EVERY_CHAPTER
-    answer = input("[1] Downloaded comic directory; [2] Exported comic : ")
+    answer = input("[1] Downloaded comic(s) directory; [2] Exported comic : ")
     root = Tk()
     root.attributes('-topmost', 'true')
     root.withdraw()
@@ -388,7 +388,10 @@ def main():
                 processor(fpp)
 
     else:
-        processor(filedialog.askdirectory(title="Open a comic directory", parent=root))
+        d = filedialog.askdirectory(title="Open a comic(s) download directory", parent=root)
+        for i in os.listdir(d):
+            if os.path.isdir(os.path.join(d, i)):
+                processor(os.path.join(d, i))
 
     root.destroy()
 
