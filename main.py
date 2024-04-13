@@ -2,6 +2,7 @@ import imghdr
 import io
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -95,7 +96,8 @@ def ehhiConvert(comic: str, comic_name: str, comic_authors: list):
     # basic spine
     book.spine = ["nav", c1]
     print("Writing to file...")
-    epub.write_epub(f"{os.path.split(comic)[-1]}.epub", book)
+    valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
+    epub.write_epub(f"{valid_file_name}.epub", book)
 
 
 def picacgConverter(comic: dict, comic_dir: str):
@@ -122,11 +124,16 @@ def picacgConverter(comic: dict, comic_dir: str):
 
     for i in downloaded_part:
         print(f"Found downloaded chapter {all_part[i]}")
-        image_list = os.listdir(os.path.join(comic_dir, str(i + 2)))
+        try:
+            image_list = os.listdir(os.path.join(comic_dir, str(i + 2)))
+            image_dir = os.path.join(comic_dir, str(i + 2))
+        except FileNotFoundError:
+            image_list = os.listdir(os.path.join(comic_dir, all_part[i]))
+            image_dir = os.path.join(comic_dir, all_part[i])
         for image in image_list:
             if image.startswith("cover") or image.endswith(".json"):
                 image_list.remove(image)
-        image_path_list = [os.path.join(comic_dir, str(i + 2), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
+        image_path_list = [os.path.join(image_dir, f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
@@ -170,7 +177,8 @@ def picacgConverter(comic: dict, comic_dir: str):
 
     # basic spine
     print("Writing to file...")
-    epub.write_epub(f"{os.path.split(comic_dir)[-1]}.epub", book)
+    valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
+    epub.write_epub(f"{valid_file_name}.epub", book)
 
 
 def jmConverter(comic: dict, comic_dir: str):
@@ -198,11 +206,16 @@ def jmConverter(comic: dict, comic_dir: str):
 
     for i in downloaded_part:
         print(f"Found downloaded chapter {all_part[i]}")
-        image_list = os.listdir(os.path.join(comic_dir, str(i + 1)))
+        try:
+            image_list = os.listdir(os.path.join(comic_dir, str(i + 2)))
+            image_dir = os.path.join(comic_dir, str(i + 2))
+        except FileNotFoundError:
+            image_list = os.listdir(os.path.join(comic_dir, all_part[i]))
+            image_dir = os.path.join(comic_dir, all_part[i])
         for image in image_list:
             if image.startswith("cover") or image.endswith(".json"):
                 image_list.remove(image)
-        image_path_list = [os.path.join(comic_dir, str(i + 1), f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
+        image_path_list = [os.path.join(image_dir, f"{i2}.{image_list[0].split('.')[-1]}") for i2 in
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
@@ -246,7 +259,8 @@ def jmConverter(comic: dict, comic_dir: str):
 
     # basic spine
     print("Writing to file...")
-    epub.write_epub(f"{os.path.split(comic_dir)[-1]}.epub", book)
+    valid_file_name = re.sub('[^\\w_.)( -\\[\\]]', '_', comic_name)
+    epub.write_epub(f"{valid_file_name}.epub", book)
 
 
 def processor(comic: str) -> None:
@@ -296,6 +310,7 @@ def main():
             with tempfile.TemporaryDirectory() as fpp:
                 zf = zipfile.ZipFile(comic_zip)
                 zf.extractall(fpp)
+                processor(fpp)
 
     else:
         processor(filedialog.askdirectory(title="Open a comic directory", parent=root))
