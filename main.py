@@ -15,7 +15,7 @@ from PIL import Image
 from ebooklib import epub
 
 PREFER_IMAGE_SIZE = (1200, 800)
-SPLIT_EVERY_CHAPTER = -999
+SPLIT_EVERY_CHAPTER = 5
 
 
 def image_resize(image_bytes: bytes) -> bytes:
@@ -171,6 +171,10 @@ def picacgConverter(comic: dict, comic_dir: str):
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
+        if len(image_list) >= 150:
+            print("There is too many images in the chapter")
+            print("Program will force split book after this chapter")
+            flag_split = sys.maxsize
         thread_pool = []
         for i2 in image_path_list:
             image_type = imghdr.what(i2)
@@ -289,6 +293,10 @@ def jmConverter(comic: dict, comic_dir: str):
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
+        if len(image_list) >= 150:
+            print("There is too many images in the chapter")
+            print("Program will force split book after this chapter")
+            flag_split = sys.maxsize
         thread_pool = []
         for i2 in image_path_list:
             image_type = imghdr.what(i2)
