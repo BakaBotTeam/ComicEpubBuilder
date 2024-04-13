@@ -23,9 +23,9 @@ def image_resize(image_bytes: bytes) -> bytes:
     img_byte_arr = io.BytesIO()
     resize_scale = 1.0
     if im.size[0] / PREFER_IMAGE_SIZE[0] > im.size[1] / PREFER_IMAGE_SIZE[1]:
-        resize_scale = min(im.size[0] / PREFER_IMAGE_SIZE[0], resize_scale)
+        resize_scale = max(im.size[0] / PREFER_IMAGE_SIZE[0], resize_scale)
     else:
-        resize_scale = min(im.size[1] / PREFER_IMAGE_SIZE[1], resize_scale)
+        resize_scale = max(im.size[1] / PREFER_IMAGE_SIZE[1], resize_scale)
     resized_im = im.resize((int(im.size[0] / resize_scale), int(im.size[1] / resize_scale)))
     resized_im.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
@@ -106,7 +106,8 @@ def picacgConverter(comic: dict, comic_dir: str):
     comic_author = comic['comicItem']['author']
     print(f"Found Picacg comic: {comic_name} by {comic_author}")
     all_part = comic['chapters']
-    downloaded_part = comic['downloadedChapters'].sort()
+    downloaded_part = comic['downloadedChapters']
+    downloaded_part.sort()
     cover_image = os.path.join(comic_dir, "cover.jpg")
     flag_splited = 0
 
@@ -196,7 +197,7 @@ def picacgConverter(comic: dict, comic_dir: str):
             t.join()
 
         for i4 in image_path_list:
-            content.append('<img src="images/{}"/>'.format("images/" + str(i) + "_" + os.path.split(i4)[-1]))
+            content.append('<img src="images/{}"/>'.format(str(i) + "_" + os.path.split(i4)[-1]))
         content.append('</body> </html>')
         c1 = epub.EpubHtml(title=all_part[i], file_name=f"chap_{i}.xhtml", lang="en")
         c1.content = ''.join(content)
@@ -220,7 +221,8 @@ def jmConverter(comic: dict, comic_dir: str):
     comic_authors = comic['comic']['author']
     print(f"Found JMComic comic: {comic_name} by {', '.join(comic_authors)}")
     all_part = comic['comic']['epNames']
-    downloaded_part = comic['downloadedChapters'].sort()
+    downloaded_part = comic['downloadedChapters']
+    downloaded_part.sort()
     cover_image = os.path.join(comic_dir, "cover.jpg")
     flag_splited = 0
 
@@ -313,7 +315,7 @@ def jmConverter(comic: dict, comic_dir: str):
             t.join()
 
         for i4 in image_path_list:
-            content.append('<img src="images/{}"/>'.format("images/" + str(i) + "_" + os.path.split(i4)[-1]))
+            content.append('<img src="images/{}"/>'.format(str(i) + "_" + os.path.split(i4)[-1]))
         content.append('</body> </html>')
         c1 = epub.EpubHtml(title=all_part[i], file_name=f"chap_{i}.xhtml", lang="en")
         c1.content = ''.join(content)
