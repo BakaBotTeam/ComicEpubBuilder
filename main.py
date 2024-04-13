@@ -3,12 +3,30 @@ import io
 import json
 import os
 import sys
+import tempfile
+import threading
+import time
 import traceback
+import zipfile
+from tkinter import filedialog, Tk
 
 from PIL import Image
 from ebooklib import epub
 
-PICA_COMIC_DOWNLOAD_DIR = os.getenv('APPDATA') + "/com.kokoiro.xyz/pica_comic/download"
+PREFER_IMAGE_SIZE = (800, 600)
+
+
+def image_resize(image_bytes: bytes) -> bytes:
+    im = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    img_byte_arr = io.BytesIO()
+    resize_scale = 1.0
+    if im.size[0] / PREFER_IMAGE_SIZE[0] > im.size[1] / PREFER_IMAGE_SIZE[1]:
+        resize_scale = im.size[0] / PREFER_IMAGE_SIZE[0]
+    else:
+        resize_scale = im.size[1] / PREFER_IMAGE_SIZE[1]
+    resized_im = im.resize((int(im.size[0] / resize_scale), int(im.size[1] / resize_scale)))
+    resized_im.save(img_byte_arr, format='JPEG')
+    return img_byte_arr.getvalue()
 
 
 def ehhiConvert(comic: str, comic_name: str, comic_authors: list):
@@ -34,29 +52,38 @@ def ehhiConvert(comic: str, comic_name: str, comic_authors: list):
     print("Adding cover to the book...")
     image_file = open(cover_image, 'rb').read()
     book.set_cover("cover.jpg", image_file, create_page=False)
-    webp_warn = False
+    warn = False
 
     content = [u'<html> <head></head> <body>']
-    print("Adding images to the book...")
-    for i in image_path_list:
-        image_file = open(i, 'rb').read()
-        image_type = imghdr.what(i)
-        if image_type == "webp":
-            if not webp_warn:
-                webp_warn = True
-                print("Adding webp to the book, that may take a while...")
-            im = Image.open(i).convert("RGB")
-            img_byte_arr = io.BytesIO()
-            im.save(img_byte_arr, format='JPEG')
-            image_file = img_byte_arr.getvalue()
+    print("Converting images, that may take a while...")
+    thread_pool = []
+    for i2 in image_path_list:
+        image_type = imghdr.what(i2)
         if image_type == "gif":
             print("GIF is not supported")
             return
-        image = epub.EpubImage()
-        image.file_name = "images/" + os.path.split(i)[-1]
-        image.content = image_file
-        book.add_item(image)
+
+        def _resizer():
+            ss = i2
+            image_file = open(ss, 'rb').read()
+            image_file = image_resize(image_file)
+            image = epub.EpubImage()
+            image.file_name = "images/" + os.path.split(ss)[-1]
+            image.content = image_file
+            book.add_item(image)
+            print("Converted image: " + os.path.split(ss)[-1])
+
+        _thread = threading.Thread(target=_resizer)
+        thread_pool.append(_thread)
+        _thread.start()
+        time.sleep(0.01)
+
+    for t in thread_pool:
+        t.join()
+
+    for i in image_path_list:
         content.append('<img src="images/{}"/>'.format(os.path.split(i)[-1]))
+
     content.append('</body> </html>')
     c1 = epub.EpubHtml(title=comic_name, file_name="chap_01.xhtml", lang="en")
     c1.content = ''.join(content)
@@ -103,25 +130,33 @@ def picacgConverter(comic: dict, comic_dir: str):
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
+        thread_pool = []
         for i2 in image_path_list:
-            image_file = open(i2, 'rb').read()
             image_type = imghdr.what(i2)
-            if image_type == "webp":
-                if not webp_warn:
-                    webp_warn = True
-                    print("Adding webp to the book, that may take a while...")
-                im = Image.open(i2).convert("RGB")
-                img_byte_arr = io.BytesIO()
-                im.save(img_byte_arr, format='JPEG')
-                image_file = img_byte_arr.getvalue()
             if image_type == "gif":
                 print("GIF is not supported")
                 return
-            image = epub.EpubImage()
-            image.file_name = f"images/{i + 2}/{os.path.split(i2)[-1]}"
-            image.content = image_file
-            book.add_item(image)
-            content.append(f'<img src="images/{i + 2}/{os.path.split(i2)[-1]}"/>')
+
+            def _resizer():
+                ss = i2
+                image_file = open(ss, 'rb').read()
+                image_file = image_resize(image_file)
+                image = epub.EpubImage()
+                image.file_name = "images/" + str(i) + "_" + os.path.split(ss)[-1]
+                image.content = image_file
+                book.add_item(image)
+                print("Converted image: " + os.path.split(ss)[-1])
+
+            _thread = threading.Thread(target=_resizer)
+            thread_pool.append(_thread)
+            _thread.start()
+            time.sleep(0.01)
+
+        for t in thread_pool:
+            t.join()
+
+        for i4 in image_path_list:
+            content.append('<img src="images/{}"/>'.format("images/" + str(i) + "_" + os.path.split(i4)[-1]))
         content.append('</body> </html>')
         c1 = epub.EpubHtml(title=all_part[i], file_name=f"chap_{i}.xhtml", lang="en")
         c1.content = ''.join(content)
@@ -171,25 +206,33 @@ def jmConverter(comic: dict, comic_dir: str):
                            range(len(image_list) - 1)]
         content = [u'<html> <head></head> <body>']
         print("Adding images to the book...")
+        thread_pool = []
         for i2 in image_path_list:
-            image_file = open(i2, 'rb').read()
             image_type = imghdr.what(i2)
-            if image_type == "webp":
-                if not webp_warn:
-                    webp_warn = True
-                    print("Adding webp to the book, that may take a while...")
-                im = Image.open(i2).convert("RGB")
-                img_byte_arr = io.BytesIO()
-                im.save(img_byte_arr, format='JPEG')
-                image_file = img_byte_arr.getvalue()
             if image_type == "gif":
                 print("GIF is not supported")
                 return
-            image = epub.EpubImage()
-            image.file_name = f"images/{i + 1}/{os.path.split(i2)[-1]}"
-            image.content = image_file
-            book.add_item(image)
-            content.append(f'<img src="images/{i + 1}/{os.path.split(i2)[-1]}"/>')
+
+            def _resizer():
+                ss = i2
+                image_file = open(ss, 'rb').read()
+                image_file = image_resize(image_file)
+                image = epub.EpubImage()
+                image.file_name = "images/" + str(i) + "_" + os.path.split(ss)[-1]
+                image.content = image_file
+                book.add_item(image)
+                print("Converted image: " + os.path.split(ss)[-1])
+
+            _thread = threading.Thread(target=_resizer)
+            thread_pool.append(_thread)
+            _thread.start()
+            time.sleep(0.01)
+
+        for t in thread_pool:
+            t.join()
+
+        for i4 in image_path_list:
+            content.append('<img src="images/{}"/>'.format("images/" + str(i) + "_" + os.path.split(i4)[-1]))
         content.append('</body> </html>')
         c1 = epub.EpubHtml(title=all_part[i], file_name=f"chap_{i}.xhtml", lang="en")
         c1.content = ''.join(content)
@@ -206,51 +249,58 @@ def jmConverter(comic: dict, comic_dir: str):
     epub.write_epub(f"{os.path.split(comic_dir)[-1]}.epub", book)
 
 
+def processor(comic: str) -> None:
+    try:
+        comic_info = json.loads(open(os.path.join(comic, "info.json"), "rb").read())
+        if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info[
+            "comic"]:
+            comic_name = comic_info["comic"]["name"]
+            comic_authors = comic_info["comic"]["artists"]
+            ehhiConvert(comic, comic_name, comic_authors)
+        elif "gallery" in comic_info:
+            comic_name = comic_info["gallery"]["title"]
+            comic_authors = comic_info["gallery"]["tags"]["artist"]
+            ehhiConvert(comic, comic_name, comic_authors)
+        elif "comicID" in comic_info and comic_info["comicID"].startswith("nhentai"):
+            comic_name = comic_info["title"]
+            comic_authors = ["N/A"]
+            ehhiConvert(comic, comic_name, comic_authors)
+        elif "comic" in comic_info and "uploader" in comic_info["comic"]:
+            comic_name = comic_info["comic"]["name"]
+            comic_authors = ["N/A"]
+            ehhiConvert(comic, comic_name, comic_authors)
+        elif "comicItem" in comic_info:
+            picacgConverter(comic_info, comic)
+            pass
+        elif "comic" in comic_info and "downloadedChapters" in comic_info:
+            jmConverter(comic_info, comic)
+            pass
+        else:
+            print("Unsupported comic")
+    except:
+        print("Unexpected error")
+        print(sys.exc_info())
+        traceback.print_exc()
+
+
 def main():
-    # list all dir in Pica Comic Download Dir
-    dirs = os.listdir(PICA_COMIC_DOWNLOAD_DIR)
-    all_comic = []
-    for dir in dirs:
-        if os.path.isdir(os.path.join(PICA_COMIC_DOWNLOAD_DIR, dir)):
-            all_comic.append(os.path.join(PICA_COMIC_DOWNLOAD_DIR, dir))
+    answer = input("[1] Downloaded comic directory; [2] Exported comic : ")
+    root = Tk()
+    root.attributes('-topmost', 'true')
+    root.withdraw()
+    if answer == "2":
+        comic_zips = filedialog.askopenfilenames(title="Open a exported comic file",
+                                                 filetypes=(("Exported comic", "*.zip"), ("All files", "*.*")),
+                                                 parent=root)
+        for comic_zip in comic_zips:
+            with tempfile.TemporaryDirectory() as fpp:
+                zf = zipfile.ZipFile(comic_zip)
+                zf.extractall(fpp)
 
-    if len(all_comic) == 0:
-        print("No comic found, program will exit.")
-        sys.exit(0)
+    else:
+        processor(filedialog.askdirectory(title="Open a comic directory", parent=root))
 
-    for comic in all_comic:
-        try:
-            comic_info = json.loads(open(os.path.join(comic, "info.json"), "rb").read())
-            if "comic" in comic_info and "downloadedChapters" not in comic_info and "uploader" not in comic_info[
-                "comic"]:
-                comic_name = comic_info["comic"]["name"]
-                comic_authors = comic_info["comic"]["artists"]
-                ehhiConvert(comic, comic_name, comic_authors)
-            elif "gallery" in comic_info:
-                comic_name = comic_info["gallery"]["title"]
-                comic_authors = comic_info["gallery"]["tags"]["artist"]
-                ehhiConvert(comic, comic_name, comic_authors)
-            elif "comicID" in comic_info and comic_info["comicID"].startswith("nhentai"):
-                comic_name = comic_info["title"]
-                comic_authors = ["N/A"]
-                ehhiConvert(comic, comic_name, comic_authors)
-            elif "comic" in comic_info and "uploader" in comic_info["comic"]:
-                comic_name = comic_info["comic"]["name"]
-                comic_authors = ["N/A"]
-                ehhiConvert(comic, comic_name, comic_authors)
-            elif "comicItem" in comic_info:
-                picacgConverter(comic_info, comic)
-                pass
-            elif "comic" in comic_info and "downloadedChapters" in comic_info:
-                jmConverter(comic_info, comic)
-                pass
-            else:
-                print("Unsupported comic: " + os.path.split(comic)[-1])
-                continue
-        except:
-            print("Unexpected error")
-            print(sys.exc_info())
-            traceback.print_exc()
+    root.destroy()
 
 
 if __name__ == '__main__':

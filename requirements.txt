@@ -1,2 +1,2 @@
-ebooklib>=0.18
-Pillow>=10.2.0
+pillow>=10.2.0
+EbookLib>=0.18
