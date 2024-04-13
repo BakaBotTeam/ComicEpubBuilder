@@ -15,7 +15,7 @@ from PIL import Image
 from ebooklib import epub
 
 PREFER_IMAGE_SIZE = (1200, 800)
-SPLIT_EVERY_CHAPTER = 5
+SPLIT_EVERY_CHAPTER = -999
 
 
 def image_resize(image_bytes: bytes) -> bytes:
@@ -356,11 +356,13 @@ def processor(comic: str) -> None:
             comic_authors = ["N/A"]
             ehhiConvert(comic, comic_name, comic_authors)
         elif "comicItem" in comic_info:
-            SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) (input -1 to disable) : "))
+            if SPLIT_EVERY_CHAPTER == -999:
+                SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) (input -1 to disable) : "))
             picacgConverter(comic_info, comic)
             pass
         elif "comic" in comic_info and "downloadedChapters" in comic_info:
-            SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) (input -1 to disable) : "))
+            if SPLIT_EVERY_CHAPTER == -999:
+                SPLIT_EVERY_CHAPTER = int(input("Split book every ? chapter(s) (input -1 to disable) : "))
             jmConverter(comic_info, comic)
             pass
         else:
