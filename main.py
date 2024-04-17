@@ -14,7 +14,9 @@ from tkinter import filedialog, Tk
 from PIL import Image
 from ebooklib import epub
 
-PREFER_IMAGE_SIZE = (1200, 800)
+IMAGE_SIZE = (768, 1024)
+ENCHANTED_IMAGE_SCALE = 1.5
+PREFER_IMAGE_SIZE = (IMAGE_SIZE[0] * ENCHANTED_IMAGE_SCALE, IMAGE_SIZE[1] * ENCHANTED_IMAGE_SCALE)
 SPLIT_EVERY_CHAPTER = 5
 
 
