@@ -15,7 +15,7 @@ from PIL import Image
 from ebooklib import epub
 
 IMAGE_SIZE = (768, 1024)
-ENCHANTED_IMAGE_SCALE = 1.5
+ENCHANTED_IMAGE_SCALE = 2.5
 PREFER_IMAGE_SIZE = (IMAGE_SIZE[0] * ENCHANTED_IMAGE_SCALE, IMAGE_SIZE[1] * ENCHANTED_IMAGE_SCALE)
 SPLIT_EVERY_CHAPTER = 5
 
@@ -28,6 +28,8 @@ def image_resize(image_bytes: bytes) -> bytes:
         resize_scale = max(im.size[0] / PREFER_IMAGE_SIZE[0], resize_scale)
     else:
         resize_scale = max(im.size[1] / PREFER_IMAGE_SIZE[1], resize_scale)
+    if resize_scale < 1.0:
+        resize_scale = 1.0
     resized_im = im.resize((int(im.size[0] / resize_scale), int(im.size[1] / resize_scale)))
     resized_im.save(img_byte_arr, format='JPEG')
     return img_byte_arr.getvalue()
